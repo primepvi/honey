@@ -5,28 +5,69 @@
 
 #define STACK_MAX 1024
 
-typedef int64_t word_t;
+typedef struct word {
+  union {
+    int64_t as_i64;
+    uint64_t as_u64;
+    double as_f64;
+    void *as_ptr;
+  };
+} word_t;
 
 typedef enum inst_op {
   OP_PUSH,
-  OP_PLUS,
+
+  OP_PLUSI,
+  OP_MINUSI,
+  OP_DIVI,
+  OP_MULTI,
+
   OP_DUMP,
   OP_HALT,
 } inst_op_t;
 
 typedef struct inst {
   inst_op_t op;
-  int32_t a, b;
+  word_t operand;
 } inst_t;
 
 #define MK_INST_PUSH(val)                                                      \
-  (inst_t) { .op = OP_PUSH, .a = (val) }
-#define MK_INST_PLUS                                                           \
-  (inst_t) { .op = OP_PLUS }
+  (inst_t) {                                                                   \
+    .op = OP_PUSH, .operand = {.as_i64 = val }                                 \
+  }
+
+#define MK_INST_PLUSI                                                          \
+  (inst_t) { .op = OP_PLUSI }
+#define MK_INST_MINUSI                                                         \
+  (inst_t) { .op = OP_MINUSI }
+#define MK_INST_DIVI                                                           \
+  (inst_t) { .op = OP_DIVI }
+#define MK_INST_MULTI                                                          \
+  (inst_t) { .op = OP_MULTI }
+
 #define MK_INST_DUMP                                                           \
   (inst_t) { .op = OP_DUMP }
 #define MK_INST_HALT                                                           \
   (inst_t) { .op = OP_HALT }
+
+#define BINARY_OPI(op)                                                         \
+  {                                                                            \
+    word_t a, b;                                                               \
+    err_code_t res_a = honey_stack_pop(vm, &a);                                \
+    err_code_t res_b = honey_stack_pop(vm, &b);                                \
+    if (res_a != ERR_OK || res_b != ERR_OK) {                                  \
+      err_code_t err = res_a != ERR_OK ? res_a : res_b;                        \
+      honey_panic(vm, err, &current);                                          \
+      return err;                                                              \
+    }                                                                          \
+    err_code_t push_res =                                                      \
+        honey_stack_push(vm, (word_t){.as_i64 = b.as_i64 op a.as_i64});        \
+    if (push_res != ERR_OK) {                                                  \
+      honey_panic(vm, push_res, &current);                                     \
+      return push_res;                                                         \
+    }                                                                          \
+    break;                                                                     \
+  }
 
 typedef enum err_code {
   ERR_OK = 0,

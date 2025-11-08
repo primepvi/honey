@@ -5,16 +5,14 @@
 
 int main(void) {
   inst_t program[] = {
-      MK_INST_PUSH(34), MK_INST_PUSH(35), MK_INST_PLUS,
-      MK_INST_DUMP,     MK_INST_HALT,
+      MK_INST_PUSH(10), MK_INST_PUSH(20), MK_INST_PUSH(10),
+      MK_INST_PLUSI,    MK_INST_MULTI,    MK_INST_HALT,
   };
 
   honey_t *honey = honey_new(program, ARRAY_SIZE(program));
   err_code_t res = honey_interpret(honey);
   if (res == ERR_OK)
     honey_stack_dump(honey);
-
-  honey_inst_cstr(OP_PLUS);
 
   honey_free(honey);
 

@@ -55,8 +55,14 @@ const char *honey_inst_cstr(inst_op_t op) {
     return "OP_DUMP";
   case OP_HALT:
     return "OP_HALT";
-  case OP_PLUS:
+  case OP_PLUSI:
     return "OP_PLUS";
+  case OP_MINUSI:
+    return "OP_MINUSI";
+  case OP_DIVI:
+    return "OP_DIVI";
+  case OP_MULTI:
+    return "OP_MULTI";
   default:
     fprintf(stderr, "unexpected: unknown instruction in honey_inst_cstr: %d\n",
             op);
@@ -70,8 +76,11 @@ void honey_stack_dump(const honey_t *vm) {
   if (vm->sp <= 0) {
     printf("  [ empty ]\n");
   } else {
-    for (size_t i = 0; i < vm->sp; i++)
-      printf("  %ld\n", vm->stack[i]);
+    for (size_t i = 0; i < vm->sp; i++) {
+      word_t word = vm->stack[i];
+      printf("  i64: %ld, u64: %lu, f64: %lf, ptr: %p\n", word.as_i64,
+             word.as_u64, word.as_f64, word.as_ptr);
+    }
   }
 }
 
@@ -79,8 +88,8 @@ void honey_panic(const honey_t *vm, err_code_t code, const inst_t *current) {
   fprintf(stderr, "\n[VM ERROR] %s\n", honey_error_cstr(code));
 
   if (current)
-    fprintf(stderr, "  -> Instruction: %s (a=%d, b=%d)\n",
-            honey_inst_cstr(current->op), current->a, current->b);
+    fprintf(stderr, "  -> Instruction: %s (operand=%ld)\n",
+            honey_inst_cstr(current->op), current->operand.as_i64);
 
   fprintf(stderr, "  IP=%zu, SP=%zu\n", vm->ip, vm->sp);
 
@@ -98,7 +107,7 @@ err_code_t honey_interpret(honey_t *vm) {
     inst_t current = vm->program[vm->ip++];
     switch (current.op) {
     case OP_PUSH: {
-      err_code_t res = honey_stack_push(vm, current.a);
+      err_code_t res = honey_stack_push(vm, current.operand);
       if (res != ERR_OK) {
         honey_panic(vm, res, &current);
         return res;
@@ -106,33 +115,24 @@ err_code_t honey_interpret(honey_t *vm) {
 
       break;
     }
-    case OP_PLUS: {
-      word_t a, b;
-      err_code_t res_a = honey_stack_pop(vm, &a);
-      err_code_t res_b = honey_stack_pop(vm, &b);
-      if (res_a != ERR_OK || res_b != ERR_OK) {
-        err_code_t err = res_a != ERR_OK ? res_a : res_b;
-        honey_panic(vm, err, &current);
-        return err;
-      }
-
-      err_code_t push_res = honey_stack_push(vm, a + b);
-      if (push_res != ERR_OK) {
-        honey_panic(vm, push_res, &current);
-        return push_res;
-      }
-
-      break;
-    }
+    case OP_PLUSI:
+      BINARY_OPI(+);
+    case OP_MINUSI:
+      BINARY_OPI(-);
+    case OP_DIVI:
+      BINARY_OPI(/);
+    case OP_MULTI:
+      BINARY_OPI(*);
     case OP_DUMP: {
-      word_t value;
-      err_code_t res = honey_stack_pop(vm, &value);
+      word_t word;
+      err_code_t res = honey_stack_pop(vm, &word);
       if (res != ERR_OK) {
         honey_panic(vm, res, &current);
         return res;
       }
 
-      printf("%ld\n", value);
+      printf("  i64: %ld, u64: %lu, f64: %lf, ptr: %p\n", word.as_i64,
+             word.as_u64, word.as_f64, word.as_ptr);
       break;
     }
     case OP_HALT:
