@@ -1,0 +1,62 @@
+#include "lexer.h"
+#include <stdlib.h>
+#include <stdio.h>
+
+static bool lexer_ident_predicate(const char c) {
+  return isalnum(c) || c == '_';
+}
+
+static bool lexer_number_predicate(const char c) { return isdigit(c); }
+
+lexer_t *lexer_new(strview_t buffer) {
+  lexer_t *lexer = malloc(sizeof(lexer_t));
+  lexer->buffer = buffer;
+  lexer->cursor = 0;
+
+  return lexer;
+}
+
+void lexer_free(lexer_t *lexer) { free(lexer); }
+
+size_t lexer_lex(lexer_t *lexer, token_t *tokens) {
+  size_t token_count = 0;
+  size_t token_cap = 25;
+  tokens = (token_t*) calloc(token_cap, sizeof(token_t));
+
+  while (lexer->cursor < lexer->buffer.length) {
+    token_t current = lexer_tokenize(lexer);
+    if (token_count >= token_cap) {
+      token_cap *= 2;
+      tokens = (token_t*) realloc(tokens, sizeof(token_t) * token_cap);
+    }
+
+    tokens[token_count++] = current;
+  }    
+
+  return token_count;
+}
+
+token_t lexer_tokenize(lexer_t *lexer) {
+  strview_t source = sv_clone(lexer->buffer);
+  size_t spaces = sv_ltrim(&source);
+  lexer->cursor += spaces;
+
+  strview_t number = sv_take_while(source, lexer_number_predicate);
+  if (number.length > 0) {
+    lexer->cursor = number.length;
+    return (token_t){.kind = TOK_NUMBER, .lexeme = number};
+  }
+
+  strview_t identifier = sv_take_while(source, lexer_ident_predicate);
+  if (identifier.length > 0) {
+    lexer->cursor += identifier.length;
+    return (token_t){.kind = TOK_IDENTIFIER, .lexeme = identifier};
+  }    
+
+  lexer->cursor++;
+  if (sv_starts_with(source, SV(":")))
+    return (token_t){.kind = TOK_COLON, .lexeme = SV(":")};
+
+  fprintf(stderr, "lexer -> invalid token has found: %c", source.buffer[0]);
+  exit(EXIT_FAILURE);
+}  

@@ -1,20 +1,23 @@
+#define SV_IMPL
+#include "sv.h"
+
 #include "honey.h"
 #include <assert.h>
+#include <stdio.h>
+#include "lexer.h"
 
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 
 int main(void) {
-  inst_t program[] = {
-      MK_INST_PUSH(10), MK_INST_PUSH(20), MK_INST_PUSH(10),
-      MK_INST_PLUSI,    MK_INST_MULTI,    MK_INST_HALT,
-  };
+  strview_t source = SV("# some commentary here\n# another comment\n\npush 10\n# comment here\npush 20\nplusi\ndebug:\ndump");
+  lexer_t *lexer = lexer_new(source);
+  size_t token_count;
+  token_t *tokens= lexer_lex(lexer, &token_count);
 
-  honey_t *honey = honey_new(program, ARRAY_SIZE(program));
-  err_code_t res = honey_interpret(honey);
-  if (res == ERR_OK)
-    honey_stack_dump(honey);
-
-  honey_free(honey);
+  for (size_t i = 0; i < token_count; i++) {
+    token_t token = tokens[i];
+    printf("k: %d, lexeme: "SV_FMT" \n", token.kind, SV_ARG(token.lexeme));
+  }
 
   return 0;
 }

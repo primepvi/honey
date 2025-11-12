@@ -1,0 +1,196 @@
+#pragma once
+
+#include <ctype.h>
+#include <stddef.h>
+#include <stdlib.h>
+#include <string.h>
+
+typedef struct sv {
+  const char *buffer;
+  size_t length;
+} strview_t;
+
+typedef bool (*strview_predicate_t)(const char);
+
+#define SV_END 0
+#define SV_FMT "%.*s"
+#define SV_ARG(sv) (int)(sv.length), sv.buffer
+#define SV_LIT(source)                                                         \
+  (strview_t) { .buffer = (source), .length = strlen(source) }
+#define SV(source) sv_from_cstr(source)
+
+strview_t sv_from_cstr(const char *source);
+strview_t sv_create(const char *buffer, size_t size);
+strview_t sv_clone(strview_t source);
+strview_t sv_empty(void);
+
+bool sv_equals(strview_t a, strview_t b);
+bool sv_starts_with(strview_t source, strview_t prefix);
+bool sv_ends_with(strview_t source, strview_t sufix);
+bool sv_is_empty(strview_t source);
+int sv_find(strview_t source, strview_t content);
+
+strview_t sv_ldrop(strview_t *source, size_t count);
+strview_t sv_rdrop(strview_t *source, size_t count);
+strview_t sv_slice(strview_t source, size_t start, size_t end);
+strview_t sv_take_while(strview_t source, strview_predicate_t predicate);
+
+bool sv_split(strview_t *source, strview_t delim, strview_t *out);
+size_t sv_trim(strview_t *source);
+size_t sv_ltrim(strview_t *source);
+size_t sv_rtrim(strview_t *source);
+
+char *sv_to_cstr(strview_t source);
+
+#ifdef SV_IMPL
+
+strview_t sv_from_cstr(const char *source) {
+  return (strview_t){.buffer = source, .length = strlen(source)};
+}
+
+strview_t sv_create(const char *buffer, size_t size) {
+  return (strview_t){.buffer = buffer, .length = size};
+}
+
+strview_t sv_clone(strview_t source) {
+  return sv_create(source.buffer, source.length);
+}
+
+strview_t sv_empty(void) { return (strview_t){.buffer = NULL, .length = 0}; }
+
+bool sv_equals(strview_t a, strview_t b) {
+  return a.length == b.length && memcmp(a.buffer, b.buffer, a.length) == 0;
+}
+
+bool sv_starts_with(strview_t source, strview_t prefix) {
+  if (prefix.length > source.length || sv_is_empty(source))
+    return 0;
+
+  return memcmp(source.buffer, prefix.buffer, prefix.length) == 0;
+}
+
+bool sv_ends_with(strview_t source, strview_t sufix) {
+  if (sufix.length > source.length || sv_is_empty(source))
+    return 0;
+
+  return memcmp(source.buffer + source.length - sufix.length, sufix.buffer,
+                sufix.length) == 0;
+}
+
+bool sv_is_empty(strview_t source) {
+  return source.length == 0 || source.buffer == NULL;
+};
+
+int sv_find(strview_t source, strview_t content) {
+  if (content.length > source.length || sv_is_empty(source))
+    return -1;
+
+  for (int i = 0; i < source.length; i++) {
+    if (memcmp(source.buffer + i, content.buffer, content.length) == 0)
+      return i;
+  }
+
+  return -1;
+}
+
+strview_t sv_ldrop(strview_t *source, size_t count) {
+  if (count >= source->length)
+    count = source->length;
+  if (sv_is_empty(*source))
+    return *source;
+
+  strview_t out = sv_create(source->buffer, count);
+  source->buffer += count;
+  source->length -= count;
+
+  return out;
+}
+
+strview_t sv_rdrop(strview_t *source, size_t count) {
+  if (count >= source->length)
+    count = source->length;
+  if (sv_is_empty(*source))
+    return *source;
+
+  strview_t out = sv_create(source->buffer + source->length - count, count);
+  source->length -= count;
+
+  return out;
+}
+
+strview_t sv_slice(strview_t source, size_t start, size_t end) {
+  if (sv_is_empty(source))
+    return source;
+
+  if (end == SV_END || end > source.length)
+    end = source.length;
+  if (start > source.length)
+    start = source.length;
+  if (end < start)
+    end = start;
+
+  return sv_create(source.buffer + start, end - start);
+}
+
+strview_t sv_take_while(strview_t source, strview_predicate_t predicate) {
+  if (sv_is_empty(source))
+    return source;
+
+  size_t cursor = 0;
+  while (cursor < source.length && predicate(source.buffer[cursor]))
+    cursor++;
+
+  return sv_create(source.buffer, cursor);
+}
+
+bool sv_split(strview_t *source, strview_t delim, strview_t *out) {
+  if (delim.length > source->length || sv_is_empty(*source) ||
+      sv_is_empty(delim))
+    return 0;
+
+  int delim_index = sv_find(*source, delim);
+  if (delim_index < 0) {
+    *out = sv_create(source->buffer, source->length);
+    sv_ldrop(source, source->length);
+    return 1;
+  }
+
+  *out = sv_slice(*source, 0, delim_index);
+  sv_ldrop(source, delim_index + 1);
+
+  return 1;
+}
+
+size_t sv_ltrim(strview_t *source) {
+  size_t cursor = 0;
+  while (cursor < source->length && isspace(source->buffer[cursor]))
+    cursor++;
+
+  strview_t spaces = sv_ldrop(source, cursor);
+  return spaces.length;
+}
+
+size_t sv_rtrim(strview_t *source) {
+  size_t cursor = source->length;
+  while (cursor >= 0 && isspace(source->buffer[cursor - 1]))
+    cursor--;
+
+  strview_t spaces = sv_rdrop(source, source->length - cursor);
+  return spaces.length;
+}
+
+size_t sv_trim(strview_t *source) {
+  size_t lspaces = sv_ltrim(source);
+  size_t rspaces = sv_rtrim(source);
+  return lspaces + rspaces;
+}
+
+char *sv_to_cstr(strview_t source) {
+  char *ptr = (char *)malloc(source.length + 1);
+  memcpy(ptr, source.buffer, source.length);
+  ptr[source.length] = '\0';
+
+  return ptr;
+}
+
+#endif
