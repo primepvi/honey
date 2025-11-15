@@ -1,8 +1,26 @@
 #include "parser.h"
 #include "../hvm/honey.h"
+#include "../lib/sv.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+struct inst_info {
+  const char* lexeme;
+  inst_op_t op;
+};
+
+static struct inst_info NON_OPERAND_INSTS[] = {
+    {"plusi", OP_PLUSI}, {"minusi", OP_MINUSI},
+    {"divi", OP_DIVI},   {"multi", OP_MULTI},
+    {"modi", OP_MODI},   {"gti", OP_GTI},
+    {"gtei", OP_GTEI},   {"lti", OP_LTI},
+    {"ltei", OP_LTEI},   {"eqi", OP_EQI},
+    {"neqi", OP_NEQI},   {"noti", OP_NOTI},
+    {"dump", OP_DUMP},   {"halt", OP_HALT},
+};
+
+static size_t NON_OPERAND_INSTS_COUNT = sizeof(NON_OPERAND_INSTS) / sizeof(struct inst_info);
 
 parser_t *parser_new(token_t *tokens, size_t token_count) {
   parser_t *parser = malloc(sizeof(parser_t));
@@ -48,30 +66,13 @@ inst_t parser_parse_inst(parser_t *parser) {
       }};
   }
 
-  if (sv_equals(current.lexeme, SV("plusi"))){
-    return (inst_t) { .op = OP_PLUSI };
+  for (size_t i = 0; i < NON_OPERAND_INSTS_COUNT; i++) {
+    struct inst_info info = NON_OPERAND_INSTS[i];
+    if (sv_equals(current.lexeme, SV(info.lexeme))) {
+      return (inst_t) {.op = info.op };
+    }
   }
-
-  if (sv_equals(current.lexeme, SV("minusi"))) {
-    return (inst_t){.op = OP_MINUSI};
-  }
-
-  if (sv_equals(current.lexeme, SV("multi"))) {
-    return (inst_t){.op = OP_MULTI};
-  }
-
-  if (sv_equals(current.lexeme, SV("divi"))) {
-    return (inst_t){.op = OP_DIVI};
-  }
-
-  if (sv_equals(current.lexeme, SV("dump"))) {
-    return (inst_t){.op = OP_DUMP};
-  }
-
-  if (sv_equals(current.lexeme, SV("halt"))) {
-    return (inst_t){.op = OP_HALT};
-  }
-
+  
   fprintf(stderr, "parser -> invalid instruction has found: " SV_FMT "\n",
           SV_ARG(current.lexeme));
   exit(EXIT_FAILURE);

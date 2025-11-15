@@ -63,6 +63,22 @@ const char *honey_inst_cstr(inst_op_t op) {
     return "OP_DIVI";
   case OP_MULTI:
     return "OP_MULTI";
+  case OP_GTI:
+    return "OP_GTI";
+  case OP_GTEI:
+    return "OP_GTEI";
+  case OP_LTI:
+    return "OP_LTI";
+  case OP_LTEI:
+    return "OP_LTEI";
+  case OP_EQI:
+    return "OP_EQI";
+  case OP_NEQI:
+    return "OP_NEQI";
+  case OP_NOTI:
+    return "OP_NOTI";
+  case OP_MODI:
+    return "OP_MODI";
   default:
     fprintf(stderr, "unexpected: unknown instruction in honey_inst_cstr: %d\n",
             op);
@@ -123,6 +139,37 @@ err_code_t honey_interpret(honey_t *vm) {
       BINARY_OPI(/);
     case OP_MULTI:
       BINARY_OPI(*);
+    case OP_MODI:
+      BINARY_OPI(%);
+    case OP_LTI:
+      BINARY_OPI(<);
+    case OP_LTEI:
+      BINARY_OPI(<=);
+    case OP_GTI:
+      BINARY_OPI(>);
+    case OP_GTEI:
+      BINARY_OPI(>=);
+    case OP_EQI:
+      BINARY_OPI(==);
+    case OP_NEQI:
+      BINARY_OPI(!=);
+    case OP_NOTI: {
+      word_t word;
+      err_code_t res = honey_stack_pop(vm, &word);
+      if (res != ERR_OK) {
+        honey_panic(vm, res, &current);
+        return res;
+      }
+
+      word.as_i64 = !word.as_i64;
+      res = honey_stack_push(vm, word);
+      if (res != ERR_OK) {
+        honey_panic(vm, res, &current);
+        return res;
+      }
+
+      break;
+    }
     case OP_DUMP: {
       word_t word;
       err_code_t res = honey_stack_pop(vm, &word);
