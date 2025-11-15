@@ -1,0 +1,7 @@
+# simple sum example
+
+push 10
+push 20
+plusi
+dump
+halt

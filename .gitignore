@@ -5,4 +5,10 @@ build/
 # MacOS Cache
 .DS_Store
 
+# Emacs backup files
+*~
+\#*\#
+.\#*
 
+# Emacs auto-save files
+\#*

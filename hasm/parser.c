@@ -1,5 +1,5 @@
 #include "parser.h"
-#include "honey.h"
+#include "../hvm/honey.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
