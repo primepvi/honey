@@ -1,0 +1,10 @@
+# check if number is odd
+push 22
+push 3
+multi
+push 2
+modi
+push 0
+neqi
+dump
+halt

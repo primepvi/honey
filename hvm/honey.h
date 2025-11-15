@@ -21,7 +21,16 @@ typedef enum inst_op {
   OP_MINUSI,
   OP_DIVI,
   OP_MULTI,
-
+  OP_MODI,
+  
+  OP_GTI,
+  OP_GTEI,
+  OP_LTI,
+  OP_LTEI,
+  OP_EQI,
+  OP_NEQI,
+  OP_NOTI,
+  
   OP_DUMP,
   OP_HALT,
 } inst_op_t;
