@@ -40,6 +40,8 @@ const char *honey_error_cstr(err_code_t code) {
     return "Stack overflow: exceeded maximum stack size";
   case ERR_STACK_UNDERFLOW:
     return "Stack underflow: attempted to pop from empty stack";
+  case ERR_STACK_ILLEGAL_ACCESS:
+    return "Illegal stack access out of bounds";
   case ERR_INST_ILLEGAL_ACCESS:
     return "Illegal program memory access: out-of-bounds read or jump";
   default:
@@ -79,6 +81,14 @@ const char *honey_inst_cstr(inst_op_t op) {
     return "OP_NOTI";
   case OP_MODI:
     return "OP_MODI";
+  case OP_JMP:
+    return "OP_JMP";
+  case OP_JZ:
+    return "OP_JZ";
+  case OP_JNZ:
+    return "OP_JNZ";
+  case OP_DUP:
+    return "OP_DUP";
   default:
     fprintf(stderr, "unexpected: unknown instruction in honey_inst_cstr: %d\n",
             op);
@@ -170,6 +180,21 @@ err_code_t honey_interpret(honey_t *vm) {
 
       break;
     }
+    case OP_DUP: {
+      if (current.operand.as_u64 >= vm->sp) {
+        honey_panic(vm, ERR_STACK_ILLEGAL_ACCESS, &current);
+        return ERR_STACK_ILLEGAL_ACCESS;
+      }
+
+      word_t word = vm->stack[current.operand.as_u64];
+      err_code_t res = honey_stack_push(vm, word);
+      if (res != ERR_OK) {
+        honey_panic(vm, res, &current);
+        return res;
+      }
+
+      break;
+    }
     case OP_DUMP: {
       word_t word;
       err_code_t res = honey_stack_pop(vm, &word);
@@ -182,9 +207,35 @@ err_code_t honey_interpret(honey_t *vm) {
              word.as_u64, word.as_f64, word.as_ptr);
       break;
     }
+    case OP_JMP:
+      vm->ip = current.operand.as_u64;
+      break;
+    case OP_JZ: {
+      word_t word;
+      err_code_t res = honey_stack_pop(vm, &word);
+      if (res != ERR_OK) {
+        honey_panic(vm, res, &current);
+        return res;
+      }
+
+      if (word.as_i64 == 0)
+        vm->ip = current.operand.as_u64;
+      break;
+    }
+    case OP_JNZ: {
+      word_t word;
+      err_code_t res = honey_stack_pop(vm, &word);
+      if (res != ERR_OK) {
+        honey_panic(vm, res, &current);
+        return res;
+      }
+
+      if (word.as_i64 != 0)
+        vm->ip = current.operand.as_u64;
+      break;
+    }
     case OP_HALT:
       return ERR_OK;
-
     default: {
       fprintf(stderr, "err: Unimplemented instruction has found -> %d:%s\n",
               current.op, honey_inst_cstr(current.op));

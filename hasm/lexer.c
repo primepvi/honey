@@ -4,7 +4,7 @@
 #include <ctype.h>
 
 static bool lexer_ident_predicate(char c) {
-  return (bool)isalnum(c);
+  return isalnum(c) || c == '_';
 }
 
 static bool lexer_number_predicate(char c) { return (bool)isdigit(c); }
