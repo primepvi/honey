@@ -30,7 +30,12 @@ typedef enum inst_op {
   OP_EQI,
   OP_NEQI,
   OP_NOTI,
+
+  OP_JMP,
+  OP_JZ,
+  OP_JNZ,
   
+  OP_DUP,
   OP_DUMP,
   OP_HALT,
 } inst_op_t;
@@ -39,25 +44,6 @@ typedef struct inst {
   inst_op_t op;
   word_t operand;
 } inst_t;
-
-#define MK_INST_PUSH(val)                                                      \
-  (inst_t) {                                                                   \
-    .op = OP_PUSH, .operand = {.as_i64 = val }                                 \
-  }
-
-#define MK_INST_PLUSI                                                          \
-  (inst_t) { .op = OP_PLUSI }
-#define MK_INST_MINUSI                                                         \
-  (inst_t) { .op = OP_MINUSI }
-#define MK_INST_DIVI                                                           \
-  (inst_t) { .op = OP_DIVI }
-#define MK_INST_MULTI                                                          \
-  (inst_t) { .op = OP_MULTI }
-
-#define MK_INST_DUMP                                                           \
-  (inst_t) { .op = OP_DUMP }
-#define MK_INST_HALT                                                           \
-  (inst_t) { .op = OP_HALT }
 
 #define BINARY_OPI(op)                                                         \
   {                                                                            \
@@ -82,6 +68,7 @@ typedef enum err_code {
   ERR_OK = 0,
   ERR_STACK_UNDERFLOW,
   ERR_STACK_OVERFLOW,
+  ERR_STACK_ILLEGAL_ACCESS,
   ERR_INST_ILLEGAL_ACCESS,
 } err_code_t;
 
