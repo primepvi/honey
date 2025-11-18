@@ -5,13 +5,11 @@
 
 #define STACK_MAX 1024
 
-typedef struct word {
-  union {
-    int64_t as_i64;
-    uint64_t as_u64;
-    double as_f64;
-    void *as_ptr;
-  };
+typedef union word  {
+  int64_t as_i64;
+  uint64_t as_u64;
+  double as_f64;
+  void *as_ptr;
 } word_t;
 
 typedef enum inst_op {
@@ -44,25 +42,6 @@ typedef struct inst {
   inst_op_t op;
   word_t operand;
 } inst_t;
-
-#define BINARY_OPI(op)                                                         \
-  {                                                                            \
-    word_t a, b;                                                               \
-    err_code_t res_a = honey_stack_pop(vm, &a);                                \
-    err_code_t res_b = honey_stack_pop(vm, &b);                                \
-    if (res_a != ERR_OK || res_b != ERR_OK) {                                  \
-      err_code_t err = res_a != ERR_OK ? res_a : res_b;                        \
-      honey_panic(vm, err, &current);                                          \
-      return err;                                                              \
-    }                                                                          \
-    err_code_t push_res =                                                      \
-        honey_stack_push(vm, (word_t){.as_i64 = b.as_i64 op a.as_i64});        \
-    if (push_res != ERR_OK) {                                                  \
-      honey_panic(vm, push_res, &current);                                     \
-      return push_res;                                                         \
-    }                                                                          \
-    break;                                                                     \
-  }
 
 typedef enum err_code {
   ERR_OK = 0,
